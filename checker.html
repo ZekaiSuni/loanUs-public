@@ -35,8 +35,12 @@ input:checked + .slider:before { transform: translateX(20px); }
 .st.info { background: #e0f2fe; color: #075985; }
 .st.off { background: #e5e7eb; color: #4b5563; }
 .detail { font-size: 14px; color: #333; line-height: 1.6; }
-.reviewnote { text-align: left; font-size: 14px; font-weight: 600; padding: 13px 16px; border-radius: 10px; margin-top: 12px; background: #eef2f7; border: 1px solid #cbd5e1; color: #1f2937; }
-.reviewnote .mini { display: block; font-weight: normal; font-size: 13px; color: #556; margin-top: 4px; }
+.bigchip { text-align: left; font-size: 18px; font-weight: 800; padding: 15px 18px; border-radius: 10px; margin: 12px 0; }
+.bigchip.red { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+.bigchip.green { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.bigchip.gray { background: #e5e7eb; color: #374151; border: 1px solid #d1d5db; }
+.bigchip .mini { display: block; font-weight: 600; font-size: 13px; margin-top: 5px; opacity: .85; }
+.disc-line { font-size: 13.5px; color: #556; margin: 10px 0 0; }
 .srcs { font-size: 13px; color: #556; line-height: 1.7; }
 .srcs a { color: #2563eb; text-decoration: none; word-break: break-all; }
 .srcs a:hover { text-decoration: underline; }
@@ -81,13 +85,19 @@ footer { color: #889; font-size: 12.5px; margin: 20px 0 30px; }
 
 <div class="card" id="resultCard" style="display:none;">
   <h2>Draft findings</h2>
-  <div id="choiceBox"></div>
-  <div class="sec"><h3>1. CIVIL USURY — DRAFT FINDINGS</h3><div><span class="st" id="civilSt"></span></div><div class="detail" id="civilDetail"></div></div>
-  <div class="sec"><h3>2. CRIMINAL USURY — DRAFT FINDINGS</h3><div><span class="st" id="crimSt"></span></div><div class="detail" id="crimDetail"></div></div>
-  <div class="sec"><h3>3. COMMERCIAL FINANCING DISCLOSURE (3.5) — DRAFT STATUS</h3><div><span class="st" id="discSt"></span></div><div class="detail" id="discDetail"></div></div>
-  <div class="sec"><h3>4. FEDERAL OVERLAY NOTES (US) — INFORMATIONAL</h3><div class="detail" id="fedList"></div></div>
-  <div class="reviewnote" id="reviewBox"></div>
-  <div style="margin-top:14px;"><details><summary style="cursor:pointer;font-size:13.5px;font-weight:600;">Sources used for these draft findings (unverified records)</summary><div class="srcs" id="srcList" style="margin-top:8px;"></div></details></div>
+  <div class="bigchip" id="bigChip"></div>
+  <div class="disc-line" id="discLine"></div>
+  <div style="margin-top:14px;">
+    <details>
+      <summary style="cursor:pointer;font-size:14.5px;font-weight:600;">Show detailed findings</summary>
+      <div id="choiceBox" style="margin-top:10px;"></div>
+      <div class="sec"><h3>1. CIVIL USURY — DRAFT FINDINGS</h3><div><span class="st" id="civilSt"></span></div><div class="detail" id="civilDetail"></div></div>
+      <div class="sec"><h3>2. CRIMINAL USURY — DRAFT FINDINGS</h3><div><span class="st" id="crimSt"></span></div><div class="detail" id="crimDetail"></div></div>
+      <div class="sec"><h3>3. COMMERCIAL FINANCING DISCLOSURE (3.5) — DRAFT STATUS</h3><div><span class="st" id="discSt"></span></div><div class="detail" id="discDetail"></div></div>
+      <div class="sec"><h3>4. FEDERAL OVERLAY NOTES (US) — INFORMATIONAL</h3><div class="detail" id="fedList"></div></div>
+      <div style="margin-top:10px;"><h2 style="font-size:13px;">Sources used for these findings (unverified records)</h2><div class="srcs" id="srcList"></div></div>
+    </details>
+  </div>
 </div>
 
 <footer>Loan Regulation Tracker · draft review engine = <span style="font-family:Consolas,monospace">scripts/lib/evaluate-engine.js</span> (same module as the CLI; scenario tests: <span style="font-family:Consolas,monospace">node scripts/test-evaluate-engine.js</span>) · regenerate: <span style="font-family:Consolas,monospace">node scripts/build-checker.js</span> · <a class="navlink" href="status.html">status dashboard</a> · archived Turkish v1: <span style="font-family:Consolas,monospace">reports/archive/checker-tr-v1-20260911.html</span></footer>
@@ -488,7 +498,7 @@ function runEvaluation() {
   $('#shieldNote').textContent = 'Scenario: ' + (hasShield ? 'DE / UT law selected' : 'local law only');
   $('#choiceBox').innerHTML = '<div class="sec"><h3>0. CHOICE OF LAW (3.3) — DRAFT RESEARCH NOTE</h3><div style="margin-bottom:6px">' + choiceHtml + '</div>' + (notes ? '<details><summary class="muted" style="cursor:pointer;font-size:13px">3.3 research records for this state</summary><ul class="detail" style="margin:6px 0 0 18px;padding:0">' + notes + '</ul></details>' : '') + '</div>';
 
-  // status chips — draft vocabulary only; no green, no approval styling
+  // status chips (inside collapsed details) — draft vocabulary only
   const cls = (s) => /RISK FLAG/.test(s) ? 'risk' : /FINDING|NO FLAG|DRAFT RECORD|NO CIVIL CAP/.test(s) ? 'info' : 'off';
   $('#civilSt').textContent = f.civilStatus; $('#civilSt').className = 'st ' + cls(f.civilStatus);
   $('#crimSt').textContent = f.criminalStatus; $('#crimSt').className = 'st ' + cls(f.criminalStatus);
@@ -500,15 +510,28 @@ function runEvaluation() {
   $('#discDetail').textContent = f.disclosureDetails || '—';
   $('#fedList').innerHTML = '<ul style="margin:0;padding-left:18px">' + f.federalAlerts.map(a => '<li>' + esc(a) + '</li>').join('') + '</ul>';
 
-  // review note — replaces the old verdict box; never a pass/approval
-  const rb = $('#reviewBox');
-  const areasEvaluated = (f.evaluatedAreas || []).join('; ') || 'none';
-  const areasNotEvaluated = (f.notEvaluatedAreas || []).join('; ') || 'none';
-  rb.innerHTML = 'DRAFT RESEARCH REVIEW ONLY' +
-    ' <span class="mini">Risk flags: <b>' + f.riskFlagCount + '</b>' +
-    ' · Areas evaluated (draft): ' + esc(areasEvaluated) +
-    ' · <b>Not evaluated (gaps — do not assume):</b> ' + esc(areasNotEvaluated) +
-    ' · ' + esc(f.review) + ' A qualified attorney must verify the underlying records before any reliance.</span>';
+  // big chip — the one thing the user reads first
+  const allMissing = [...new Set([...(f.civilMissingInputs || []), ...(f.criminalMissingInputs || [])])];
+  const bc = $('#bigChip');
+  if (!f.evaluatable) {
+    bc.className = 'bigchip gray';
+    bc.innerHTML = 'CANNOT EVALUATE WITH CURRENT INPUTS' +
+      '<span class="mini">Missing facts: ' + esc(allMissing.join(', ') || 'see detailed findings') +
+      (f.riskFlagCount > 0 ? ' · Risk flags found regardless: ' + f.riskFlagCount : '') +
+      ' — answer the missing facts or open detailed findings below</span>';
+  } else if (f.riskFlagCount > 0) {
+    bc.className = 'bigchip red';
+    bc.innerHTML = 'RISK FLAGS FOUND — ' + f.riskFlagCount + '<span class="mini">See detailed findings below.</span>';
+  } else {
+    bc.className = 'bigchip green';
+    bc.innerHTML = 'NO RISK FLAGS FOUND<span class="mini">In draft research records — see disclaimer above.</span>';
+  }
+
+  // disclosure one-liner
+  const dl = $('#discLine');
+  dl.innerHTML = /DRAFT RECORD/.test(f.disclosureStatus)
+    ? '📋 Disclosure: a separate commercial-financing disclosure record is on file for this state — see <a class="navlink" href="status.html">status dashboard</a>.'
+    : '<span class="muted">📋 Disclosure: no record on file for this state (not evaluated).</span>';
 
   // sources actually used (expandable, labeled)
   const srcs = [];
