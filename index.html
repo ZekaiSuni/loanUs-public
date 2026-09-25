@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loan Regulation Tracker — Draft Research Pages</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f7f8fa; color: #1a1a2e; padding: 20px; line-height: 1.5; }
+.wrap { max-width: 720px; width: 100%; }
+h1 { font-size: 24px; margin: 0 0 6px; }
+.muted { color: #667; font-size: 14px; margin: 0 0 18px; }
+.notice { background: #eef2f7; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px 16px; font-size: 14px; margin-bottom: 20px; }
+.notice b { font-size: 14.5px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+a.card { display: block; background: #fff; border: 1px solid #e2e6ee; border-radius: 12px; padding: 20px 22px; text-decoration: none; color: inherit; transition: border-color .15s; }
+a.card:hover { border-color: #2563eb; }
+a.card h2 { margin: 0 0 6px; font-size: 17px; color: #2563eb; }
+a.card p { margin: 0; font-size: 13.5px; color: #556; }
+footer { margin-top: 18px; color: #889; font-size: 12.5px; }
+footer code { font-family: Consolas, monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Loan Regulation Tracker</h1>
+  <p class="muted">US state + federal commercial-lending regulation research pages · 51 jurisdictions · generated 2026-09-25</p>
+  <div class="notice">
+    <b>⚠ DISCLAIMER — DRAFT RESEARCH, NOT LEGAL ADVICE, NOT A CREDIT DECISION.</b>
+    Everything on these pages is machine-drafted, unverified research (<code>status: draft, verified_by: null</code>).
+    No output may be read as a compliance determination, clearance, or approval.
+    <b>Review and sign-off by qualified counsel licensed in the relevant state is required before any pricing, drafting, underwriting, or other use.</b>
+  </div>
+  <div class="cards">
+    <a class="card" href="checker.html">
+      <h2>Draft Research Review →</h2>
+      <p>Interactive screen: pick a state, principal, and rate; get draft findings, risk flags, and not-evaluable notes from the embedded review engine. Commercial working-capital loans (LLC borrower) only.</p>
+    </a>
+    <a class="card" href="status.html">
+      <h2>Status Dashboard →</h2>
+      <p>All 276 research records across 51 jurisdictions and the federal layer, with draft status, source citations and links, and open TODO(lawyer) questions. Searchable.</p>
+    </a>
+  </div>
+  <footer>Regenerate locally: <code>node scripts/build-checker.js &amp;&amp; node scripts/report.js</code> · scenario tests: <code>node scripts/test-evaluate-engine.js</code> · records remain draft until qualified-counsel sign-off.</footer>
+</div>
+</body>
+</html>
