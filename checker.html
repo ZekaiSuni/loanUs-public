@@ -235,11 +235,12 @@ function evaluate(params, dataDirs) {
     findings[section + "MissingInputs"] = [];
   }
 
-  function markArea(section, label, evaluated, reason) {
+  function markArea(section, label, evaluated, reason, opts) {
+    const affectsEvaluatable = !(opts && opts.affectsEvaluatable === false);
     if (evaluated) findings.evaluatedAreas.push(label);
     else {
       findings.notEvaluatedAreas.push(label + (reason ? " (" + reason + ")" : ""));
-      findings.evaluatable = false;
+      if (affectsEvaluatable) findings.evaluatable = false;
     }
   }
 
@@ -445,8 +446,10 @@ function evaluate(params, dataDirs) {
   const discLabel = findings.disclosureStatus === "DRAFT RECORD ON FILE"
     ? "commercial financing disclosure (draft record on file; contents not evaluated)"
     : "commercial financing disclosure";
+  // disclosure gap is surfaced on its own line; it does not flip the overall
+  // evaluatable flag (civil/criminal resolvability drives that).
   markArea("disclosure", discLabel, findings.disclosureStatus === "DRAFT RECORD ON FILE",
-    "no 3.5 record on file");
+    "no 3.5 record on file", { affectsEvaluatable: false });
 
   return findings;
 };
