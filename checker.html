@@ -65,6 +65,8 @@ footer { color: #889; font-size: 12.5px; margin: 20px 0 30px; }
     <div><label for="amountInput">Principal (USD)</label><input type="number" id="amountInput" step="5000" min="1" placeholder="e.g. 100000" inputmode="numeric"></div>
     <div><label for="rateInput">Interest rate (% per annum)</label><input type="number" id="rateInput" step="0.5" min="0" placeholder="e.g. 18" inputmode="decimal"></div>
     <div><label for="borrowerSelect">Borrower type</label><select id="borrowerSelect"><option value="llc">LLC</option><option value="corporation">Corporation</option><option value="individual">Individual</option></select></div>
+    <div><label for="writtenSelect">Rate agreed in signed written contract?</label><select id="writtenSelect"><option value="">— select —</option><option value="true">Yes — written</option><option value="false">No — not in writing</option></select></div>
+    <div><label for="securedSelect">Security / collateral</label><select id="securedSelect"><option value="">— select —</option><option value="unsecured">Unsecured</option><option value="commercial_real_estate">Commercial real estate</option><option value="borrower_residence">Borrower's principal residence</option><option value="other">Other collateral</option></select></div>
   </div>
   <div class="inputerr" id="inputErr">Enter a valid principal (greater than 0) and interest rate (0 or more). No findings can be produced from empty or invalid inputs.</div>
   <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -109,7 +111,11 @@ const D = JSON.parse(document.getElementById('data').textContent);
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 for (const code of Object.keys(D.states)) $('#stateSelect').add(new Option((D.stateNames[code]||code)+' ('+code+')'+(D.states[code].tag?' — '+D.states[code].tag:''), code));
-function setPreset(st, amt, rate, shield){ $('#stateSelect').value = st; $('#amountInput').value = amt; $('#rateInput').value = rate; $('#shieldToggle').checked = shield; runEvaluation(); }
+function setPreset(st, amt, rate, shield){
+  $('#stateSelect').value = st; $('#amountInput').value = amt; $('#rateInput').value = rate;
+  $('#writtenSelect').value = 'true'; $('#securedSelect').value = 'unsecured';
+  $('#shieldToggle').checked = shield; runEvaluation();
+}
 
 /* ================================================================
    ENGINE — embedded verbatim from scripts/lib/evaluate-engine.js
@@ -137,16 +143,25 @@ function evaluate(params, dataDirs) {
   };
 
   // ---- condition resolution ------------------------------------------------
-  // Only these fields are evaluable from checker/CLI inputs. Everything else
-  // is a research-record condition the current inputs cannot resolve.
+  // Fields evaluable from checker/CLI inputs: loan_amount, borrower_type,
+  // written_agreement / rate_agreed_in_writing (same fact), loan_purpose
+  // (product scope is fixed: business), secured_status (semantic classes).
+  // Everything else (license_status, lender_type, loan_class, computation_
+  // method, arranged_by, ...) is a research-record condition the current
+  // inputs cannot resolve.
   const BORROWER_ALIASES = {
     llc: ["llc", "limited_liability_company"],
     corporation: ["corporation"],
     individual: ["individual", "natural_person"],
   };
 
+  const KNOWN_FIELDS = new Set([
+    "loan_amount", "borrower_type", "written_agreement", "rate_agreed_in_writing",
+    "loan_purpose", "secured_status",
+  ]);
+
   function assertResolvable(c) {
-    if (c.field !== "loan_amount" && c.field !== "borrower_type") {
+    if (!KNOWN_FIELDS.has(c.field)) {
       throw { unknownField: c.field };
     }
     if (c.field === "loan_amount" && ["in", "not_in"].includes(c.operator)) {
@@ -155,6 +170,17 @@ function evaluate(params, dataDirs) {
     if (c.field === "borrower_type" && [">", ">=", "<", "<="].includes(c.operator)) {
       throw { unknownField: c.field + "(" + c.operator + ")" };
     }
+  }
+
+  // Maps the checker's collateral question to the record-side secured_status
+  // classes. Unknown values classify as null -> treated as unresolvable.
+  function classifySecurity(v) {
+    const s = String(v == null ? "" : v).toLowerCase();
+    if (/unsecured|noncollateral|no_collateral/.test(s)) return "unsecured";
+    if (/residen|principal_residence|single_family|owner_occupied|1_or_2_family|one_or_two|1_4|home/.test(s)) return "residence";
+    if (/real_estate|real_property|mortgage|deed_of_trust/.test(s)) return "realestate";
+    if (/personal_property|deposit|receivab|other_collateral|equipment|inventory/.test(s)) return "other";
+    return null;
   }
 
   function testCondition(c, params) {
@@ -176,6 +202,31 @@ function evaluate(params, dataDirs) {
       const hit = values.some((v) => aliases.includes(v));
       if (c.operator === "in" || c.operator === "==") return hit;
       if (c.operator === "not_in" || c.operator === "!=") return !hit;
+    }
+    if (c.field === "written_agreement" || c.field === "rate_agreed_in_writing") {
+      if (typeof params.writtenAgreement !== "boolean") throw { unknownField: c.field };
+      const hit = params.writtenAgreement === (c.value === true || c.value === "true");
+      if (c.operator === "==") return hit;
+      if (c.operator === "!=") return !hit;
+      throw { unknownField: c.field + "(" + c.operator + ")" };
+    }
+    if (c.field === "loan_purpose") {
+      const purpose = String(params.loanPurpose || "business").toLowerCase();
+      const values = (Array.isArray(c.value) ? c.value : [c.value]).map((v) => String(v).toLowerCase());
+      const hit = values.includes(purpose);
+      if (c.operator === "in" || c.operator === "==") return hit;
+      if (c.operator === "not_in" || c.operator === "!=") return !hit;
+      throw { unknownField: c.field + "(" + c.operator + ")" };
+    }
+    if (c.field === "secured_status") {
+      if (typeof params.securedStatus !== "string" || !params.securedStatus) throw { unknownField: "secured_status" };
+      const want = classifySecurity(c.value);
+      const have = classifySecurity(params.securedStatus);
+      if (want === null || have === null) throw { unknownField: "secured_status(" + String(c.value) + ")" };
+      const hit = want === have;
+      if (c.operator === "==") return hit;
+      if (c.operator === "!=") return !hit;
+      throw { unknownField: c.field + "(" + c.operator + ")" };
     }
     throw { unknownField: c.field + "?" };
   }
@@ -471,12 +522,15 @@ function runEvaluation() {
   const { a: amount, r: rate } = v;
   const state = $('#stateSelect').value;
   const borrower = $('#borrowerSelect').value;
+  const writtenRaw = $('#writtenSelect').value;
+  const writtenAgreement = writtenRaw === '' ? undefined : (writtenRaw === 'true');
+  const securedStatus = $('#securedSelect').value || undefined;
   const hasShield = $('#shieldToggle').checked;
   const st = D.states[state];
   $('#resultCard').style.display = 'block';
 
   // shared engine call
-  const f = evaluate({ state, amount, rate, borrower }, { state31: DOC31[state], state35: DOC35[state] });
+  const f = evaluate({ state, amount, rate, borrower, writtenAgreement, securedStatus, loanPurpose: 'business' }, { state31: DOC31[state], state35: DOC35[state] });
 
   // Choice-of-law panel — draft research note only (no verdict escalation).
   const notes = (DOC33[state] && DOC33[state].items || []).map(it => '<li>' + esc((it.rule && it.rule.description) || it.summary || '') + '</li>').join('');
@@ -550,6 +604,8 @@ $('#stateSelect').addEventListener('change', runEvaluation);
 $('#amountInput').addEventListener('input', runEvaluation);
 $('#rateInput').addEventListener('input', runEvaluation);
 $('#borrowerSelect').addEventListener('change', runEvaluation);
+$('#writtenSelect').addEventListener('change', runEvaluation);
+$('#securedSelect').addEventListener('change', runEvaluation);
 // initial pass: with empty inputs this shows the validation message immediately
 // (no findings can be produced from empty/invalid inputs)
 runEvaluation();
