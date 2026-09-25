@@ -37,7 +37,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 .detail { font-size: 14px; color: #333; line-height: 1.6; }
 .bigchip { text-align: left; font-size: 18px; font-weight: 800; padding: 15px 18px; border-radius: 10px; margin: 12px 0; }
 .bigchip.red { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
-.bigchip.green { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.bigchip.info { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
 .bigchip.gray { background: #e5e7eb; color: #374151; border: 1px solid #d1d5db; }
 .bigchip .mini { display: block; font-weight: 600; font-size: 13px; margin-top: 5px; opacity: .85; }
 .disc-line { font-size: 13.5px; color: #556; margin: 10px 0 0; }
@@ -172,15 +172,43 @@ function evaluate(params, dataDirs) {
     }
   }
 
-  // Maps the checker's collateral question to the record-side secured_status
-  // classes. Unknown values classify as null -> treated as unresolvable.
-  function classifySecurity(v) {
-    const s = String(v == null ? "" : v).toLowerCase();
-    if (/unsecured|noncollateral|no_collateral/.test(s)) return "unsecured";
-    if (/residen|principal_residence|single_family|owner_occupied|1_or_2_family|one_or_two|1_4|home/.test(s)) return "residence";
-    if (/real_estate|real_property|mortgage|deed_of_trust/.test(s)) return "realestate";
-    if (/personal_property|deposit|receivab|other_collateral|equipment|inventory/.test(s)) return "other";
-    return null;
+  // EXPLICIT collateral-class map (senior finding 2026-09-25: keyword search
+  // mis-classified MD's negated value). Record-side secured_status values are
+  // enumerated from all records; string = one class, array = any of these
+  // classes, { not: X } = complement (anything except class X).
+  const SECURED_CLASS_MAP = {
+    // checker question values
+    "unsecured": "unsecured",
+    "commercial_real_estate": "realestate_other",
+    "borrower_residence": "residence",
+    "other": "other_collateral",
+    // record-side values (all records, enumerated 2026-09-25)
+    "single_family_owner_occupied_residence": "residence",
+    "residential_real_property_secured": "residence",
+    "residential_real_property_owner_occupied_1_4": "residence",
+    "residential_first_lien_1_6_dwelling": "residence",
+    "owner_occupied_one_or_two_family_residence": "residence",
+    "secured_by_real_estate_1_to_4_family": "residence",
+    "borrower_principal_residence_mortgage": "residence",
+    "not_residential_real_property_secured": { not: "residence" },
+    "secured_by_lien_on_real_property_other_than_single_family_residence": "realestate_other",
+    "secured_by_real_estate_lien": ["residence", "realestate_other"],
+    "mortgage_or_deed_of_trust_real_property": ["residence", "realestate_other"],
+    "real_property_secured": ["residence", "realestate_other"],
+    "secured_by_certificate_of_deposit": "cd",
+    "secured_by_collateral_other_than_certificate_of_deposit": ["residence", "realestate_other", "other_collateral"],
+  };
+
+  // true/false when both sides map to classes; null when unmapped.
+  function securedMatches(recordValue, formValue) {
+    const rec = SECURED_CLASS_MAP[String(recordValue)];
+    const form = SECURED_CLASS_MAP[String(formValue)];
+    if (rec == null || form == null) return null;
+    // complement record value ({ not: X }): matches any form class except X
+    if (rec && typeof rec === "object" && rec.not != null) return form !== rec.not;
+    const recSet = Array.isArray(rec) ? rec : [rec];
+    const formSet = Array.isArray(form) ? form : [form];
+    return formSet.some((c) => recSet.includes(c));
   }
 
   function testCondition(c, params) {
@@ -220,10 +248,8 @@ function evaluate(params, dataDirs) {
     }
     if (c.field === "secured_status") {
       if (typeof params.securedStatus !== "string" || !params.securedStatus) throw { unknownField: "secured_status" };
-      const want = classifySecurity(c.value);
-      const have = classifySecurity(params.securedStatus);
-      if (want === null || have === null) throw { unknownField: "secured_status(" + String(c.value) + ")" };
-      const hit = want === have;
+      const hit = securedMatches(c.value, params.securedStatus);
+      if (hit === null) throw { unknownField: "secured_status(" + String(c.value) + ")" };
       if (c.operator === "==") return hit;
       if (c.operator === "!=") return !hit;
       throw { unknownField: c.field + "(" + c.operator + ")" };
@@ -580,8 +606,11 @@ function runEvaluation() {
     bc.className = 'bigchip red';
     bc.innerHTML = 'RISK FLAGS FOUND — ' + f.riskFlagCount + '<span class="mini">See detailed findings below.</span>';
   } else {
-    bc.className = 'bigchip green';
-    bc.innerHTML = 'NO RISK FLAGS FOUND<span class="mini">In draft research records — see disclaimer above.</span>';
+    bc.className = 'bigchip info';
+    bc.innerHTML = 'NO RISK FLAGS FOUND IN THE EVALUATED AREAS' +
+      '<span class="mini">Evaluated (draft): ' + esc((f.evaluatedAreas || []).join('; ') || 'none') +
+      ' · Not evaluated: ' + esc((f.notEvaluatedAreas || []).join('; ') || 'none') +
+      ' · Draft research, not a clearance — see disclaimer above.</span>';
   }
 
   // disclosure one-liner
