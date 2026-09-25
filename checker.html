@@ -599,9 +599,10 @@ function runEvaluation() {
   if (!f.evaluatable) {
     bc.className = 'bigchip gray';
     bc.innerHTML = 'CANNOT EVALUATE WITH CURRENT INPUTS' +
-      '<span class="mini">Missing facts: ' + esc(allMissing.join(', ') || 'see detailed findings') +
+      '<span class="mini">Missing facts: ' + esc(allMissing.join(', ') || 'none recorded') +
       (f.riskFlagCount > 0 ? ' · Risk flags found regardless: ' + f.riskFlagCount : '') +
-      ' — answer the missing facts or open detailed findings below</span>';
+      ' · Research gaps: ' + esc((f.notEvaluatedAreas || []).join('; ') || 'none') +
+      ' — open detailed findings below</span>';
   } else if (f.riskFlagCount > 0) {
     bc.className = 'bigchip red';
     bc.innerHTML = 'RISK FLAGS FOUND — ' + f.riskFlagCount + '<span class="mini">See detailed findings below.</span>';
