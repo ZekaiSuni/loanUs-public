@@ -1,5 +1,7 @@
 # Loan Regulation Tracker — Draft Research Pages
 
+**🔴 Live site: [https://zekaisuni.github.io/loanUs-public/](https://zekaisuni.github.io/loanUs-public/)**
+
 Static research pages for US commercial-lending interest and usury research across 51 jurisdictions (50 states + DC) plus a federal overlay.
 
 - **[checker.html](checker.html)** — interactive draft research review: pick a state, principal, and rate; get draft findings, risk flags, and not-evaluable notes from an embedded review engine. Commercial working-capital loans only.
