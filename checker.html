@@ -64,11 +64,11 @@ footer { color: #889; font-size: 12.5px; margin: 20px 0 30px; }
   </div>
   <div class="inputerr" id="inputErr">Enter a valid principal (greater than 0) and interest rate (0 or more). No findings can be produced from empty or invalid inputs.</div>
   <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-    <span class="muted" style="font-size:12px;font-weight:700;letter-spacing:.4px;">EXAMPLE SCENARIOS (case studies, not recommendations)</span>
-    <button class="preset" onclick="setPreset('MT',100000,38,true)">MT 38% — recorded high choice-risk</button>
-    <button class="preset" onclick="setPreset('CA',150000,38,true)">CA 38% — recorded choice-risk case</button>
-    <button class="preset" onclick="setPreset('NY',100000,38,true)">NY 38% — below-$2.5M criminal band</button>
-    <button class="preset" onclick="setPreset('FL',200000,38,true)">FL 38% — case study</button>
+    <span class="muted" style="font-size:12px;font-weight:700;letter-spacing:.4px;">EXAMPLE SCENARIOS (risk-line illustrations — each deliberately crosses a recorded line; not recommendations)</span>
+    <button class="preset" onclick="setPreset('AR',100000,17.5,false)">AR 17.5% — above 17% constitutional ceiling</button>
+    <button class="preset" onclick="setPreset('NY',100000,25.5,false)">NY 25.5% — above 25% criminal line</button>
+    <button class="preset" onclick="setPreset('TN',100000,24.5,false)">TN 24.5% — above 24% recorded ceiling</button>
+    <button class="preset" onclick="setPreset('FL',400000,45.5,false)">FL 45.5% — above 45% felony threshold</button>
   </div>
   <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#f4f6f9;border:1px solid #d9deea;border-radius:10px;padding:12px 14px;">
     <div>
